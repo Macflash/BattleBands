@@ -65,10 +65,11 @@
                         </div>
                     </div>
                     <div id="ExistingSongs" style="outline: 2px solid black; padding: 5px; margin: 5px; max-height;200px; overflow-y: auto;">
-                        <div ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : 'black')))) }}; padding: 5px; margin: 5px;">
+                        <div ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : (option.idea.quality > 10 ? 'black' : 'brown'))))) }}; padding: 5px; margin: 5px;">
                             <button ng-click="show=true" ng-show="!show">+</button>
                             <button ng-click="show=false" ng-show="show">-</button>
                             <i>{{song.idea.name}}</i>
+                            <button ng-click="band.songCatalog.splice(band.songCatalog.indexOf(song), 1)">X</button>
                             <div ng-show="show">
                                 <div>Length: {{song.idea.length * 1000 * 60 | date : "mm:ss"}}</div>
                                 <div>Intensity: {{song.idea.intensity | number: 0}}</div>
