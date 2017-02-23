@@ -1,0 +1,204 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>BattleBands</title>
+    <link rel="stylesheet" href="app.css" type="text/css" />
+    <script src="angular.js"></script>
+    <script src="app.js"></script>
+</head>
+<body ng-app="battleBands">
+    <div ng-controller="GameController">
+        <h1>Battle Bands</h1>
+
+        <!--
+        This is the main city you are based in.
+        Has stuff like write music, hire musicians, work a job, buy instruments, practice, etc.
+        -->
+        <div id="MainCity">
+            <div id="Status" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                <div>
+                    <button ng-click="ShowStatus = !ShowStatus">
+                        <span ng-show="!ShowStatus">+</span>
+                        <span ng-show="ShowStatus">-</span>
+                    </button>
+                    Status
+                </div>
+                <div ng-show="ShowStatus">
+                    <div>
+                        Band: {{band.name}}
+                    </div>
+                    <div>
+                        Money: ${{ band.money | number: 2}}
+                    </div>
+
+                    <div>
+                        Fans: {{ band.fans }}
+                    </div>
+
+                    <div>
+                        Buzz: {{band.buzz}}
+                    </div>
+                </div>
+            </div>
+
+            <div id="Music" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                <div>
+                    <button ng-click="ShowMusic = !ShowMusic">
+                        <span ng-show="!ShowMusic">+</span>
+                        <span ng-show="ShowMusic">-</span>
+                    </button>
+                    Music
+                </div>
+                <div ng-show="ShowMusic">
+                    <div id="NewSongs" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                        <button ng-click="writeSong()">Write Song</button>
+                        <div ng-show="SongOptions">
+                            <div ng-repeat="option in SongOptions" style="outline: 2px solid {{ option.idea.quality > 95 ? 'gold' : (option.idea.quality > 85 ? 'purple' : (option.idea.quality > 70 ? 'blue' : (option.idea.quality > 40 ? 'green' : (option.idea.quality > 20 ? 'grey' : (option.idea.quality > 10 ? 'black' : 'brown'))))) }}; padding: 5px; margin: 5px;">
+                                <button ng-click="PickSong(option)">Pick</button>
+                                <div><i>{{option.idea.name}}</i></div>
+                                <div>Length: {{option.idea.length * 1000 * 60 | date : "mm:ss"}}</div>
+                                <div>Intensity: {{option.idea.intensity | number: 0}}</div>
+                                <div>Speed: {{option.idea.speed | number: 0}}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ExistingSongs" style="outline: 2px solid black; padding: 5px; margin: 5px; max-height;200px; overflow-y: auto;">
+                        <div ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : 'black')))) }}; padding: 5px; margin: 5px;">
+                            <button ng-click="show=true" ng-show="!show">+</button>
+                            <button ng-click="show=false" ng-show="show">-</button>
+                            <i>{{song.idea.name}}</i>
+                            <div ng-show="show">
+                                <div>Length: {{song.idea.length * 1000 * 60 | date : "mm:ss"}}</div>
+                                <div>Intensity: {{song.idea.intensity | number: 0}}</div>
+                                <div>Speed: {{song.idea.speed | number: 0}}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Members" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                <div>
+                    <button ng-click="ShowMembers = !ShowMembers">
+                        <span ng-show="!ShowMembers">+</span>
+                        <span ng-show="ShowMembers">-</span>
+                    </button>
+                    Members
+                </div>
+                <div ng-show="ShowMembers">
+                    <div>
+                        <div ng-repeat="member in band.members" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                            <div>{{member.name}}</div>
+                            <div ng-repeat="skill in member.skill track by $index">
+                                {{InstrumentSlot[$index]}}: {{skill}}
+                            </div>
+                            <div ng-repeat="eq in member.equipment track by $index">
+                                {{eq.name}}: {{eq.quality}} ({{eq.condition}}%)
+                                <button ng-click="unequip(member, eq)">Unequip</button>
+                                <button ng-click="sell(member, eq)">Sell for ${{GetSalePrice(eq)}}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <button>Look for Members</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Equipment" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                <div>
+                    <button ng-click="ShowEquipment = !ShowEquipment">
+                        <span ng-show="!ShowEquipment">+</span>
+                        <span ng-show="ShowEquipment">-</span>
+                    </button>
+                    Equipment
+                </div>
+                <div ng-show="ShowEquipment">
+                    <div>
+                        <div ng-repeat="eq in band.backline" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                            <div>{{eq.name}}</div>
+                            <div>
+                                {{InstrumentSlot[eq.type]}}: {{eq.condition}}/{{eq.quality}}
+                                <button ng-click="equip(member, eq)">Equip</button>
+                                <button ng-click="sell(null, eq)">Sell for ${{GetSalePrice(eq)}}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <button>Buy Equipment</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="City" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                <div>
+                    <button ng-click="ShowCity = !ShowCity">
+                        <span ng-show="!ShowCity">+</span>
+                        <span ng-show="ShowCity">-</span>
+                    </button>
+                    City
+                </div>
+                <div>Currently in: {{currentCity.name}}</div>
+                <div ng-show="ShowCity">
+                    <div>Fans in {{currentCity.name}}: {{currentCity.fans}} ({{currentCity.fansForShow}} want to see a show)</div>
+                    <div>
+                        <button>Play Show</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Map" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                <div>
+                    <button ng-click="ShowMap = !ShowMap">
+                        <span ng-show="!ShowMap">+</span>
+                        <span ng-show="ShowMap">-</span>
+                    </button>
+                    Map
+                </div>
+                <div ng-show="ShowMap">
+                    <div>
+                        <div ng-show="selectedCity && selectedCity != currentCity">
+                            Selected: {{selectedCity.name}}
+                            <button ng-click="selectedCity = null">X</button>
+                            <div>Distance: {{GetCityDistance(selectedCity, currentCity)}} miles ({{GetDrivingTime(GetCityDistance(selectedCity, currentCity)) | number: 1}} hours)</div>
+                            <div><button ng-click="drive()">Drive</button> (Costs ${{GetGasCost(GetCityDistance(selectedCity, currentCity), band.vehicle)}} in gas)</div>
+                        </div>
+                    </div>
+                    <div style="margin: 5px; padding: 5px; outline: 2px solid black; display:inline-block; width: 700px; height: 470px; position: relative;">
+
+                        <div id="map" style="position: relative;">
+                            <img src="us-map.jpg" style="position: absolute; top:5; left:5; z-index: 1;" width="700" />
+                        </div>
+
+                        <div ng-repeat="city in cities" style="position:absolute;top:{{city.top - (.5 * city.width)}}px;left:{{city.left - (.5 * city.width)}}px;z-index:2">
+                            <img src="marker.png" width="{{city.width}}" ng-click="cityClick(city)" alt="{{city.name}}" title="{{city.name}}" />
+                        </div>
+
+                        <div>
+                            <img src="arrow.png" width="30" style="position:absolute;top:{{currentCity.top - 30}}px;left:{{currentCity.left - 15}}px;z-index:3" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--
+        This is the stage where you play shows.
+        -->
+        <div id="Stage">
+
+        </div>
+
+        <!--
+        This is the "Road" where you go on tour.
+        Every night you play a show in order to win fans, sell merch and unlock better venues and performance slots
+        -->
+        <div id="Tour">
+
+        </div>
+
+    </div>
+</body>
+</html>
