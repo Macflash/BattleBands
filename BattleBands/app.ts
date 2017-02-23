@@ -92,6 +92,70 @@ class Album {
     overallPopularity: () => number;
 }
 
+interface IPerformanceSlot {
+    name: string;
+    typicalDrawPercent: number;
+    unlocked: boolean;
+    minDrawExpected: number;
+    paymentFlat: number;
+    paymentPercent: number;
+    minSongs: number;
+    maxSongs: number;
+}
+
+class OpenMic implements IPerformanceSlot {
+    name = "Open Mic";
+    typicalDrawPercent = .5;
+    minSongs = 1;
+    maxSongs = 2;
+    unlocked = true;
+    minDrawExpected = 0;
+    paymentFlat = 0;
+    paymentPercent = 0;
+}
+
+class BarOpener implements IPerformanceSlot {
+    name = "Opener";
+    typicalDrawPercent = .33;
+    minSongs = 3;
+    maxSongs = 5;
+    unlocked = false;
+    minDrawExpected = 10;
+    paymentFlat = 10;
+    paymentPercent = .05; //percent of bar. lets say ticket is like $5
+}
+
+class BarHeadliner implements IPerformanceSlot {
+    name = "Headliner";
+    typicalDrawPercent = .5;
+    minSongs = 5;
+    maxSongs = 7;
+    unlocked = false;
+    minDrawExpected = 15;
+    paymentFlat = 20;
+    paymentPercent = .1; //percent of bar? or say ticket is like $5
+}
+
+interface IVenue {
+    name: string;
+    relationship: number;
+    capacity: number;
+    minTicketPrice: number;
+    maxTicketPrice: number; //maybe more of a range
+    performanceSlots: IPerformanceSlot[];
+    typicalGenre: any;
+}
+
+class CoffeeShop implements IVenue {
+    name = "The Coffee Hedge";
+    relationship = 0;
+    capacity = 20;
+    minTicketPrice = 0;
+    maxTicketPrice = 0;
+    performanceSlots = [new OpenMic()];
+    typicalGenre = "Acoustic";
+}
+
 class City {
     name: string;
     top: number;
@@ -99,14 +163,16 @@ class City {
     width: number;
     fans: number;
     fansForShow: number;
+    venues: IVenue[];
 
-    constructor(n, t, l, w = 20) {
+    constructor(n, t, l, w = 20, venues = []) {
         this.name = n;
         this.top = t;
         this.left = l;
         this.width = w;
         this.fans = 0;
         this.fansForShow = 0;
+        this.venues = venues;
     }
 }
 
@@ -465,7 +531,7 @@ battleBands.controller('GameController', ['$scope', ($scope: GameScope) => {
     $scope.band.currentTop = 30;
 
     $scope.cities = [
-        new City("Seattle", 40, 70, 25),
+        new City("Seattle", 40, 70, 25, [new CoffeeShop()]),
         new City("Portland", 70, 60),
         new City("Missoula", 75, 180, 15),
         new City("San Fransisco", 195, 35),

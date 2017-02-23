@@ -65,15 +65,68 @@ var Album = (function () {
     }
     return Album;
 })();
+var OpenMic = (function () {
+    function OpenMic() {
+        this.name = "Open Mic";
+        this.typicalDrawPercent = .5;
+        this.minSongs = 1;
+        this.maxSongs = 2;
+        this.unlocked = true;
+        this.minDrawExpected = 0;
+        this.paymentFlat = 0;
+        this.paymentPercent = 0;
+    }
+    return OpenMic;
+})();
+var BarOpener = (function () {
+    function BarOpener() {
+        this.name = "Opener";
+        this.typicalDrawPercent = .33;
+        this.minSongs = 3;
+        this.maxSongs = 5;
+        this.unlocked = false;
+        this.minDrawExpected = 10;
+        this.paymentFlat = 10;
+        this.paymentPercent = .05; //percent of bar. lets say ticket is like $5
+    }
+    return BarOpener;
+})();
+var BarHeadliner = (function () {
+    function BarHeadliner() {
+        this.name = "Headliner";
+        this.typicalDrawPercent = .5;
+        this.minSongs = 5;
+        this.maxSongs = 7;
+        this.unlocked = false;
+        this.minDrawExpected = 15;
+        this.paymentFlat = 20;
+        this.paymentPercent = .1; //percent of bar? or say ticket is like $5
+    }
+    return BarHeadliner;
+})();
+var CoffeeShop = (function () {
+    function CoffeeShop() {
+        this.name = "The Coffee Hedge";
+        this.relationship = 0;
+        this.capacity = 20;
+        this.minTicketPrice = 0;
+        this.maxTicketPrice = 0;
+        this.performanceSlots = [new OpenMic()];
+        this.typicalGenre = "Acoustic";
+    }
+    return CoffeeShop;
+})();
 var City = (function () {
-    function City(n, t, l, w) {
+    function City(n, t, l, w, venues) {
         if (w === void 0) { w = 20; }
+        if (venues === void 0) { venues = []; }
         this.name = n;
         this.top = t;
         this.left = l;
         this.width = w;
         this.fans = 0;
         this.fansForShow = 0;
+        this.venues = venues;
     }
     return City;
 })();
@@ -378,7 +431,7 @@ battleBands.controller('GameController', ['$scope', function ($scope) {
         $scope.band.currentLeft = 60;
         $scope.band.currentTop = 30;
         $scope.cities = [
-            new City("Seattle", 40, 70, 25),
+            new City("Seattle", 40, 70, 25, [new CoffeeShop()]),
             new City("Portland", 70, 60),
             new City("Missoula", 75, 180, 15),
             new City("San Fransisco", 195, 35),
