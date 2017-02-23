@@ -107,6 +107,8 @@ var BarHeadliner = (function () {
 var CoffeeShop = (function () {
     function CoffeeShop() {
         this.name = "The Coffee Hedge";
+        this.stageSlots = 2;
+        this.drinkTickets = 0;
         this.relationship = 0;
         this.capacity = 20;
         this.minTicketPrice = 0;
@@ -306,11 +308,148 @@ var BassGuitar = (function () {
     }
     return BassGuitar;
 })();
+var MoveType;
+(function (MoveType) {
+    MoveType[MoveType["Musical"] = 0] = "Musical";
+    MoveType[MoveType["Technical"] = 1] = "Technical";
+    MoveType[MoveType["Style"] = 2] = "Style";
+    MoveType[MoveType["StagePresence"] = 3] = "StagePresence"; // this is like stage dives or crowd involvement
+})(MoveType || (MoveType = {}));
+var Concert = (function () {
+    function Concert(venue, slot, city) {
+        this.crowd = [];
+        this.setlist = [];
+        this.currentSong = null;
+        this.maxSetLength = slot.maxSongs;
+        this.minSetLength = slot.minSongs;
+        // current metrics
+        this.music = 50;
+        this.technical = 50;
+        this.style = 50;
+        this.presence = 50;
+        //indirect metrics
+        this.energry = 50;
+        this.volume = 50;
+        this.variety = 50;
+        this.recognition = 0;
+        this.newMusic = 0;
+        //merch
+        this.startingMerch = 0;
+        this.merchSold = 0;
+        // tickets/payment
+        this.ticketPrice = flatRandomInt(venue.minTicketPrice, venue.maxTicketPrice);
+        var venueCrowd = Math.floor(venue.capacity * slot.typicalDrawPercent * Math.random()) + 2;
+        var bandDrawFans = doubleRandomInt(0, city.fans);
+        var bandDrawExcitedFans = flatRandomInt(0, city.fansForShow);
+        console.debug("venue drew", venueCrowd);
+        console.debug("band drew", bandDrawFans);
+        console.debug("band drew big", bandDrawExcitedFans);
+        this.ticketsSold = Math.min(venueCrowd + bandDrawFans + bandDrawExcitedFans, venue.capacity);
+        this.barSales = 0;
+        if (this.ticketsSold == venue.capacity) {
+            console.log("you sold out the venue!");
+        }
+    }
+    Concert.prototype.playSong = function (song) {
+        if (!this.currentSong || this.currentPlace > this.currentSong.idea.length) {
+            this.setlist.push(song);
+            this.currentSong = song;
+            this.currentPlace = 0;
+        }
+        else {
+            alert("The current song is not done!");
+        }
+    };
+    return Concert;
+})();
+// QUALITIES:
+// 100 = God-tier. Legendary. Probably dead at 27. 
+// 90+ = AMAZING. Provides a large bonus to sound
+// 80+ = Really good professional. good bonus
+// 70+ = touring professional. decent bonus.
+// 60+ = solid. some bonus.
+// 50+ = above average musician. how did you get that tone? small bonus
+// 40+ = decent musician. little to no bonus.
+// 30+ = ok amateur. little to no minus.
+// 20+ = learning amateur. small minus.
+// 10+ = bad karaoke. pretty big minus.
+// 0+  = get off the stage. lord help us minus.
+var EffectType;
+(function (EffectType) {
+    // Positive status effects
+    EffectType[EffectType["Harmony"] = 0] = "Harmony";
+    // Bad status effects
+    EffectType[EffectType["Injured"] = 1] = "Injured";
+    EffectType[EffectType["Disonnance"] = 2] = "Disonnance";
+})(EffectType || (EffectType = {}));
+var EffectLocality;
+(function (EffectLocality) {
+    EffectLocality[EffectLocality["Local"] = 0] = "Local";
+    EffectLocality[EffectLocality["Party"] = 1] = "Party"; // affects everyone in the band
+})(EffectLocality || (EffectLocality = {}));
+var Harmony = (function () {
+    function Harmony(length, strength) {
+        this.type = EffectType.Harmony;
+        this.locality = EffectLocality.Party;
+        this.length = length;
+        this.strength = strength;
+    }
+    return Harmony;
+})();
+var PlayNote = (function () {
+    function PlayNote() {
+        this.type = MoveType.Musical;
+        this.energyCost = 1;
+        this.difficulty = 1;
+        this.damage = 1;
+    }
+    return PlayNote;
+})();
+var Solo = (function () {
+    function Solo() {
+        this.type = MoveType.Musical;
+        this.energyCost = 2;
+        this.difficulty = 2;
+        this.damage = 3;
+    }
+    return Solo;
+})();
+var Shred = (function () {
+    function Shred() {
+        this.type = MoveType.Technical;
+        this.energyCost = 3;
+        this.difficulty = 3;
+        this.damage = 5;
+    }
+    return Shred;
+})();
+var Harmonize = (function () {
+    function Harmonize() {
+        this.type = MoveType.Musical;
+        this.energyCost = 2;
+        this.difficulty = 2;
+        this.damage = 1;
+        this.effect = new Harmony(2, 1);
+    }
+    return Harmonize;
+})();
+var TalkToCrowd = (function () {
+    function TalkToCrowd() {
+        this.type = MoveType.StagePresence;
+        this.energyCost = 1;
+        this.difficulty = 2;
+        this.damage = 1;
+    }
+    return TalkToCrowd;
+})();
 var SingerSongwriter = (function () {
     function SingerSongwriter() {
         this.name = "Claire";
         this.skill = [25, 25];
+        this.fatigue = 0;
+        this.energy = 3;
         this.equipment = [new BeginnerAcousticGuitar()];
+        this.moves = [new PlayNote(), new TalkToCrowd()];
     }
     return SingerSongwriter;
 })();
@@ -318,7 +457,10 @@ var Guitarist = (function () {
     function Guitarist() {
         this.name = "Greg";
         this.skill = [0, 35];
+        this.fatigue = 0;
+        this.energy = 3;
         this.equipment = [new SquierStrat()];
+        this.moves = [new PlayNote(), new Solo()];
     }
     return Guitarist;
 })();
@@ -326,7 +468,10 @@ var Bassist = (function () {
     function Bassist() {
         this.name = "Sam";
         this.skill = [0, 0, 35];
+        this.fatigue = 0;
+        this.energy = 3;
         this.equipment = [new SquierStrat()];
+        this.moves = [new PlayNote(), new Harmonize()];
     }
     return Bassist;
 })();
@@ -334,12 +479,17 @@ var Drummer = (function () {
     function Drummer() {
         this.name = "Tu";
         this.skill = [0, 0, 0, 35];
+        this.fatigue = 0;
+        this.energy = 3;
         this.equipment = [new SquierStrat()];
+        this.moves = [new PlayNote(), new Solo()];
     }
     return Drummer;
 })();
 var Band = (function () {
     function Band() {
+        this.currentDay = 0;
+        this.currentTime = 0;
         this.money = 1000;
         this.fans = 1;
         this.buzz = 0;
@@ -352,9 +502,36 @@ var Band = (function () {
         this.discography = [];
     }
     Band.prototype.searchForMembers = function (count) {
+        this.UpdateTime();
         return null;
     };
+    // Every Action is 4 hours for simplicity.
+    Band.prototype.UpdateTime = function () {
+        this.currentTime++;
+        if (this.currentTime > 5) {
+            this.currentTime = 0;
+            this.currentDay++;
+        }
+    };
+    Band.prototype.Sleep = function () {
+        this.currentDay++;
+        this.currentTime = 0; // 8 am
+    };
+    Band.prototype.WorkPartTime = function () {
+        this.UpdateTime();
+        this.money += 4 * 10;
+    };
+    Band.prototype.WorkFullTime = function () {
+        if (this.currentTime != 0) {
+            alert("You're late! This is a real job. You have to start work at 8AM sharp!");
+            return;
+        }
+        this.UpdateTime();
+        this.UpdateTime();
+        this.money += 8 * 15;
+    };
     Band.prototype.writeSong = function (count) {
+        this.UpdateTime();
         var result = [];
         for (var i = 0; i < count; i++) {
             var s = new Song();
@@ -411,6 +588,13 @@ var GameState;
     GameState[GameState["Studio"] = 3] = "Studio";
 })(GameState || (GameState = {}));
 battleBands.controller('GameController', ['$scope', function ($scope) {
+        $scope.GameState = GameState;
+        $scope.CurrentGameState = GameState.MainCity;
+        $scope.PlayShow = function (venue, slot) {
+            //TODO: check if the venue is ope
+            $scope.CurrentGameState = GameState.Concert;
+            $scope.concert = new Concert(venue, slot, $scope.currentCity);
+        };
         $scope.writeSong = function () {
             $scope.SongOptions = $scope.band.writeSong(3);
         };
@@ -491,6 +675,11 @@ battleBands.controller('GameController', ['$scope', function ($scope) {
                     window.alert("Not enough money!");
                     return;
                 }
+            }
+        };
+        $scope.deleteSong = function (song) {
+            if (confirm("Are you sure you want to delete " + song.idea.name)) {
+                $scope.band.songCatalog.splice($scope.band.songCatalog.indexOf(song), 1);
             }
         };
     }]);

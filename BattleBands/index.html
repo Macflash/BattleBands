@@ -16,14 +16,23 @@
         This is the main city you are based in.
         Has stuff like write music, hire musicians, work a job, buy instruments, practice, etc.
         -->
-        <div id="MainCity">
-            <div id="Status" style="outline: 2px solid black; padding: 5px; margin: 5px;">
-                <div>
-                    <button ng-click="ShowStatus = !ShowStatus">
-                        <span ng-show="!ShowStatus">+</span>
-                        <span ng-show="ShowStatus">-</span>
-                    </button>
-                    Status
+        <div id="MainCity" ng-show="CurrentGameState == GameState.MainCity">
+            <div id="Status" style="outline: 2px solid black; padding: 5px; margin: 5px;" ng-init="ShowStatus=true">
+                <div id="StatusTitleBar">
+                    <span>
+                        <button ng-click="ShowStatus = !ShowStatus">
+                            <span ng-show="!ShowStatus">+</span>
+                            <span ng-show="ShowStatus">-</span>
+                        </button>
+                        Status
+                    </span>
+                    <span>Day {{band.currentDay}}: </span>
+                    <span ng-show="band.currentTime === 0">8am</span>
+                    <span ng-show="band.currentTime === 1">Noon</span>
+                    <span ng-show="band.currentTime === 2">4pm</span>
+                    <span ng-show="band.currentTime === 3">8pm</span>
+                    <span ng-show="band.currentTime === 4">Midnight</span>
+                    <span ng-show="band.currentTime === 5">4am</span>
                 </div>
                 <div ng-show="ShowStatus">
                     <div>
@@ -40,6 +49,11 @@
                     <div>
                         Buzz: {{band.buzz}}
                     </div>
+                </div>
+                <div>
+                    <button ng-click="band.Sleep()" ng-disabled="band.currentTime < 4" title="Resets to the next morning. Removes fatigue.">Sleep</button>
+                    <button ng-click="band.WorkPartTime()" title="Work a part time job for low pay.">Work Part Time</button>
+                    <button ng-click="band.WorkFullTime()" ng-disabled="band.currentTime!==0" title="Work a full time job for better pay.">Work Full Time</button>
                 </div>
             </div>
 
@@ -64,12 +78,12 @@
                             </div>
                         </div>
                     </div>
-                    <div id="ExistingSongs" style="outline: 2px solid black; padding: 5px; margin: 5px; max-height;200px; overflow-y: auto;">
+                    <div id="ExistingSongs" style="outline: 2px solid black; padding: 5px; margin: 5px; max-height:200px; overflow-y: auto;">
                         <div ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : (song.idea.quality > 10 ? 'black' : 'brown'))))) }}; padding: 5px; margin: 5px;">
                             <button ng-click="show=true" ng-show="!show">+</button>
                             <button ng-click="show=false" ng-show="show">-</button>
                             <i>{{song.idea.name}}</i>
-                            <button ng-click="band.songCatalog.splice(band.songCatalog.indexOf(song), 1)">X</button>
+                            <button ng-click="deleteSong(song)">X</button>
                             <div ng-show="show">
                                 <div>Length: {{song.idea.length * 1000 * 60 | date : "mm:ss"}}</div>
                                 <div>Intensity: {{song.idea.intensity | number: 0}}</div>
@@ -146,14 +160,21 @@
                     <div>Fans in {{currentCity.name}}: {{currentCity.fans}} ({{currentCity.fansForShow}} want to see a show)</div>
                     <div>
                         Venues
-                        <div ng-repeat="venue in currentCity.venues">
+                        <div ng-repeat="venue in currentCity.venues" style="outline: 2px solid black; padding: 5px; margin: 5px;">
                             {{venue.name}}
                             <div>Capacity: {{venue.capacity}}</div>
-                            <div ng-repeat="slot in venue.performanceSlots">{{slot.name}} 
-                                <button ng-disabled="!slot.unlocked" ng-click="PlayShow(venue, slot)">Play</button>
+                            <div ng-repeat="slot in venue.performanceSlots">
+                                <div>{{slot.minSongs}}-{{slot.maxSongs}} songs</div>
+                                <div>Payout: ${{slot.paymentFlat}}</div>
+                                <button ng-disabled="!slot.unlocked || band.songCatalog.length < slot.minSongs || band.currentTime!=3" ng-click="PlayShow(venue, slot)">{{slot.name}}</button>
                             </div>
                         </div>
                     </div>
+                </div>
+                <div>
+                    <i ng-show="band.currentTime !== 3" style="color:red">Closed</i>
+                    <i ng-show="band.currentTime == 3" style="color:green">Open</i>
+                    <div ng-show="band.currentTime !== 3">Venues open at 8pm</div>
                 </div>
             </div>
 
@@ -195,16 +216,45 @@
         <!--
         This is the stage where you play shows.
         -->
-        <div id="Stage">
-
+        <div id="Concert" ng-show="CurrentGameState == GameState.Concert">
+            <div id="Venue">
+                <div id="Stage"></div>
+                <div id="Crowd"></div>
+            </div>
+            <div id="ConcertStatus">
+                <div id="Setlist">
+                    <div id="Played Songs">
+                        <div ng-repeat="song in concert.setlist">{{song.name}}</div>
+                    </div>
+                    <div id="SongCatalog" style="outline: 2px solid black; padding: 5px; margin: 5px; max-height:200px; overflow-y: auto;">
+                        <div ng-show="!concert.currentSong || (concert.setlist.indexOf(song) < 0 && concert.currentSong.idea.length < concert.currentPlace)" ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : (song.idea.quality > 10 ? 'black' : 'brown'))))) }}; padding: 5px; margin: 5px;">
+                            <button ng-click="show=true" ng-show="!show">+</button>
+                            <button ng-click="show=false" ng-show="show">-</button>
+                            <i>{{song.idea.name}}</i>
+                            <button ng-click="concert.playSong(song)">PLAY</button>
+                            <div ng-show="show">
+                                <div>Length: {{song.idea.length * 1000 * 60 | date : "mm:ss"}}</div>
+                                <div>Intensity: {{song.idea.intensity | number: 0}}</div>
+                                <div>Speed: {{song.idea.speed | number: 0}}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="SongTracker">
+                    {{concert.currentSong.idea.name || 'Pick a song'}}
+                    {{concert.currentPlace * 1000 * 60 | date : "mm:ss"}} / {{concert.currentSong.idea.length * 1000 * 60 | date : "mm:ss"}}
+                </div>
+                <div id="MusicMoves"></div>
+                <div id="CurrentResults"></div>
+            </div>
         </div>
 
         <!--
         This is the "Road" where you go on tour.
         Every night you play a show in order to win fans, sell merch and unlock better venues and performance slots
         -->
-        <div id="Tour">
-
+        <div id="Tour"  ng-show="CurrentGameState == GameState.Tour">
+            TOUR
         </div>
 
     </div>

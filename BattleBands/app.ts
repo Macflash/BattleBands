@@ -140,14 +140,18 @@ interface IVenue {
     name: string;
     relationship: number;
     capacity: number;
+    stageSlots: number;
+    drinkTickets: number;
     minTicketPrice: number;
     maxTicketPrice: number; //maybe more of a range
     performanceSlots: IPerformanceSlot[];
-    typicalGenre: any;
+    typicalGenre: MoveType;
 }
 
 class CoffeeShop implements IVenue {
     name = "The Coffee Hedge";
+    stageSlots = 2;
+    drinkTickets = 0;
     relationship = 0;
     capacity = 20;
     minTicketPrice = 0;
@@ -347,6 +351,104 @@ class BassGuitar implements IMusicEquipment {
     size = 5;
 }
 
+enum MoveType {
+    Musical, // this is like "Normal" in pokemon
+    Technical, // this is like shredding
+    Style, // this is like cool stuff
+    StagePresence // this is like stage dives or crowd involvement
+}
+
+interface IConcertGoer {
+    prefferedMoves: MoveType;
+    currentEngagement: number; // 0 - 100? defines how close to the stage
+    favoriteSongs: Song[];
+}
+
+class Concert {
+    crowd: IConcertGoer[];
+    setlist: Song[];
+    currentSong: Song;
+    currentPlace: number; // how far into the song we are
+
+    maxSetLength: number;
+    minSetLength: number;
+
+    // current metrics
+    music: number;
+    technical: number;
+    style: number;
+    presence: number;
+
+    //indirect metrics
+    energry: number;
+    volume: number;
+    variety: number;
+    recognition: number;
+    newMusic: number;
+
+    //merch
+    startingMerch: number;
+    merchSold: number;
+
+    // tickets/payment
+    ticketPrice: number;
+    ticketsSold: number;
+    barSales: number;
+
+    public playSong(song: Song) {
+        if (!this.currentSong || this.currentPlace > this.currentSong.idea.length) {
+            this.setlist.push(song);
+            this.currentSong = song;
+            this.currentPlace = 0;
+        }
+        else {
+            alert("The current song is not done!");
+        }
+    }
+
+    constructor(venue: IVenue, slot: IPerformanceSlot, city: City) {
+        this.crowd = [];
+        this.setlist = [];
+        this.currentSong = null;
+        this.maxSetLength = slot.maxSongs;
+        this.minSetLength = slot.minSongs;
+
+        // current metrics
+        this.music = 50;
+        this.technical = 50;
+        this.style = 50;
+        this.presence = 50;
+
+        //indirect metrics
+        this.energry = 50;
+        this.volume = 50;
+        this.variety = 50;
+        this.recognition = 0;
+        this.newMusic = 0;
+
+        //merch
+        this.startingMerch = 0;
+        this.merchSold = 0;
+
+        // tickets/payment
+        this.ticketPrice = flatRandomInt(venue.minTicketPrice, venue.maxTicketPrice);
+
+        var venueCrowd = Math.floor(venue.capacity * slot.typicalDrawPercent * Math.random()) + 2;
+        var bandDrawFans = doubleRandomInt(0, city.fans);
+        var bandDrawExcitedFans = flatRandomInt(0, city.fansForShow);
+        console.debug("venue drew", venueCrowd);
+        console.debug("band drew", bandDrawFans);
+        console.debug("band drew big", bandDrawExcitedFans);
+
+        this.ticketsSold = Math.min(venueCrowd + bandDrawFans + bandDrawExcitedFans, venue.capacity);
+        this.barSales = 0;
+
+        if (this.ticketsSold == venue.capacity) {
+            console.log("you sold out the venue!");
+        }
+    }
+}
+
 // QUALITIES:
 // 100 = God-tier. Legendary. Probably dead at 27. 
 // 90+ = AMAZING. Provides a large bonus to sound
@@ -359,38 +461,131 @@ class BassGuitar implements IMusicEquipment {
 // 20+ = learning amateur. small minus.
 // 10+ = bad karaoke. pretty big minus.
 // 0+  = get off the stage. lord help us minus.
+enum EffectType {
+    // Positive status effects
+    Harmony, //boosts moves later
+
+    // Bad status effects
+    Injured,
+    Disonnance,
+}
+
+enum EffectLocality {
+    Local, // affects just this person
+    Party // affects everyone in the band
+}
+
+interface IEffect {
+    type: EffectType;
+    locality: EffectLocality;
+    strength: number; // relative strength, not always used
+    length: number; //in turns
+}
+
+class Harmony implements IEffect {
+    type = EffectType.Harmony;
+    locality = EffectLocality.Party;
+    strength: number; // relative strength, not always used
+    length: number; //in turns
+    constructor(length: number, strength: number) {
+        this.length = length;
+        this.strength = strength;
+    }
+}
+
+interface IMusicMove {
+    type: MoveType;
+    energyCost: number;
+    difficulty: number;
+    damage: number;
+    effect?: IEffect;
+    failureEffect?: IEffect;
+}
+
+class PlayNote implements IMusicMove {
+    type = MoveType.Musical;
+    energyCost = 1;
+    difficulty = 1;
+    damage = 1;
+}
+
+class Solo implements IMusicMove {
+    type = MoveType.Musical;
+    energyCost = 2;
+    difficulty = 2;
+    damage = 3;
+}
+
+class Shred implements IMusicMove {
+    type = MoveType.Technical;
+    energyCost = 3;
+    difficulty = 3;
+    damage = 5;
+}
+
+class Harmonize implements IMusicMove {
+    type = MoveType.Musical;
+    energyCost = 2;
+    difficulty = 2;
+    damage = 1;
+    effect = new Harmony(2, 1);
+}
+
+class TalkToCrowd implements IMusicMove {
+    type = MoveType.StagePresence;
+    energyCost = 1;
+    difficulty = 2;
+    damage = 1;
+}
 
 interface IMusician {
     name: string;
     skill: number[]; //indexed by instrument
+    fatigue: number;
+    energy: number;
+    moves: IMusicMove[];
     equipment: IMusicEquipment[];
 }
 
 class SingerSongwriter implements IMusician {
     name = "Claire";
     skill = [25, 25];
+    fatigue = 0;
+    energy = 3;
     equipment = [new BeginnerAcousticGuitar()];
+    moves = [new PlayNote(), new TalkToCrowd()];
 }
 
 class Guitarist implements IMusician {
     name = "Greg";
     skill = [0, 35];
+    fatigue = 0;
+    energy = 3;
     equipment = [new SquierStrat()];
+    moves = [new PlayNote(), new Solo()];
 }
 
 class Bassist implements IMusician {
     name = "Sam";
     skill = [0, 0, 35];
+    fatigue = 0;
+    energy = 3;
     equipment = [new SquierStrat()];
+    moves = [new PlayNote(), new Harmonize()];
 }
 
 class Drummer implements IMusician {
     name = "Tu";
     skill = [0, 0, 0, 35];
+    fatigue = 0;
+    energy = 3;
     equipment = [new SquierStrat()];
+    moves = [new PlayNote(), new Solo()];
 }
 
 class Band {
+    public currentTime: number;
+    public currentDay: number;
     public currentLeft: number;
     public currentTop: number;
 
@@ -407,6 +602,8 @@ class Band {
     public discography: IRecord[];
 
     constructor() {
+        this.currentDay = 0;
+        this.currentTime = 0;
         this.money = 1000;
         this.fans = 1;
         this.buzz = 0;
@@ -420,10 +617,42 @@ class Band {
     }
 
     public searchForMembers(count: number): IMusician {
+        this.UpdateTime();
         return null;
     }
 
+    // Every Action is 4 hours for simplicity.
+    public UpdateTime() {
+        this.currentTime++;
+        if (this.currentTime > 5) {
+            this.currentTime = 0;
+            this.currentDay++;
+        }
+    }
+
+    public Sleep() {
+        this.currentDay++;
+        this.currentTime = 0; // 8 am
+    }
+
+    public WorkPartTime() {
+        this.UpdateTime();
+        this.money += 4 * 10;
+    }
+
+    public WorkFullTime() {
+        if (this.currentTime != 0) { //full time requires starting at 8 am
+            alert("You're late! This is a real job. You have to start work at 8AM sharp!");
+            return;
+        }
+
+        this.UpdateTime();
+        this.UpdateTime();
+        this.money += 8 * 15;
+    }
+
     public writeSong(count: number): Song[] {
+        this.UpdateTime();
         var result = [];
         for (var i = 0; i < count; i++) {
             var s = new Song();
@@ -499,6 +728,11 @@ interface GameScope {
     lookForMembers: any;
     SongOptions: Song[];
     PickSong: any;
+    deleteSong: any;
+    PlayShow: (venue: IVenue, slot: IPerformanceSlot) => void;
+    CurrentGameState: GameState;
+    GameState: any;
+    concert: Concert;
 }
 
 enum GameState {
@@ -509,6 +743,14 @@ enum GameState {
 }
 
 battleBands.controller('GameController', ['$scope', ($scope: GameScope) => {
+    $scope.GameState = GameState;
+    $scope.CurrentGameState = GameState.MainCity;
+    $scope.PlayShow = (venue: IVenue, slot: IPerformanceSlot) => {
+        //TODO: check if the venue is ope
+        $scope.CurrentGameState = GameState.Concert;
+        $scope.concert = new Concert(venue, slot, $scope.currentCity);
+    }
+
     $scope.writeSong = () => {
         $scope.SongOptions = $scope.band.writeSong(3);
     }
@@ -597,6 +839,12 @@ battleBands.controller('GameController', ['$scope', ($scope: GameScope) => {
                 window.alert("Not enough money!");
                 return;
             }
+        }
+    }
+
+    $scope.deleteSong = (song: Song) => {
+        if (confirm("Are you sure you want to delete " + song.idea.name)) {
+            $scope.band.songCatalog.splice($scope.band.songCatalog.indexOf(song), 1)
         }
     }
 }]);
