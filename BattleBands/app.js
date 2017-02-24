@@ -114,7 +114,7 @@ var CoffeeShop = (function () {
         this.minTicketPrice = 0;
         this.maxTicketPrice = 0;
         this.performanceSlots = [new OpenMic()];
-        this.typicalGenre = "Acoustic";
+        this.typicalGenre = MoveType.Musical;
     }
     return CoffeeShop;
 })();

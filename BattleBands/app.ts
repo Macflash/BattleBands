@@ -157,7 +157,7 @@ class CoffeeShop implements IVenue {
     minTicketPrice = 0;
     maxTicketPrice = 0;
     performanceSlots = [new OpenMic()];
-    typicalGenre = "Acoustic";
+    typicalGenre = MoveType.Musical;
 }
 
 class City {
@@ -369,6 +369,7 @@ class Concert {
     setlist: Song[];
     currentSong: Song;
     currentPlace: number; // how far into the song we are
+    currentMusician: number; // which member you are on
 
     maxSetLength: number;
     minSetLength: number;
