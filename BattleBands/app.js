@@ -310,23 +310,34 @@ var BassGuitar = (function () {
 })();
 var MoveType;
 (function (MoveType) {
-    MoveType[MoveType["Musical"] = 0] = "Musical";
-    MoveType[MoveType["Technical"] = 1] = "Technical";
-    MoveType[MoveType["Style"] = 2] = "Style";
-    MoveType[MoveType["StagePresence"] = 3] = "StagePresence"; // this is like stage dives or crowd involvement
+    MoveType[MoveType["None"] = 0] = "None";
+    MoveType[MoveType["Musical"] = 1] = "Musical";
+    MoveType[MoveType["Technical"] = 2] = "Technical";
+    MoveType[MoveType["Style"] = 3] = "Style";
+    MoveType[MoveType["StagePresence"] = 4] = "StagePresence"; // this is like stage dives or crowd involvement
 })(MoveType || (MoveType = {}));
+var BasicConcertGoer = (function () {
+    function BasicConcertGoer() {
+        this.prefferedMoves = MoveType.None;
+        this.currentEngagement = flatRandom(0, 20);
+        this.favoriteSongs = [];
+    }
+    return BasicConcertGoer;
+})();
 var Concert = (function () {
-    function Concert(venue, slot, city) {
+    function Concert(venue, slot, city, musicians) {
+        this.songsPlayed = 0;
         this.crowd = [];
+        this.musicians = musicians;
         this.setlist = [];
         this.currentSong = null;
         this.maxSetLength = slot.maxSongs;
         this.minSetLength = slot.minSongs;
         // current metrics
-        this.music = 50;
-        this.technical = 50;
-        this.style = 50;
-        this.presence = 50;
+        this.metrics = [];
+        for (var i = 0; i < 5; i++) {
+            this.metrics[i] = 50;
+        }
         //indirect metrics
         this.energry = 50;
         this.volume = 50;
@@ -349,7 +360,45 @@ var Concert = (function () {
         if (this.ticketsSold == venue.capacity) {
             console.log("you sold out the venue!");
         }
+        for (var i = 0; i < this.ticketsSold; i++) {
+            this.crowd.push(new BasicConcertGoer());
+        }
+        this.payout = slot.paymentFlat + slot.paymentPercent * this.ticketPrice * this.ticketsSold;
+        // current song setup
+        this.currentSong = null;
+        this.currentPlace = 0;
+        this.currentMusician = 0;
     }
+    Concert.prototype.playMove = function (musician, move) {
+        musician.energy -= move.energyCost;
+        // have to handle the familiarity of the song
+        var skillBonus = Math.sqrt(musician.skill[musician.equipment[0].type]);
+        var roll = flatRandom(0, 10);
+        var difficulty = move.difficulty;
+        console.log("skill:" + skillBonus + "/roll:" + roll + "/difficulty:" + difficulty);
+        if (roll < skillBonus) {
+            console.log("Success!");
+            //success!
+            this.metrics[move.type] += move.damage;
+        }
+        else {
+            console.log("Fail...");
+            this.metrics[move.type] *= .9;
+        }
+        this.currentMusician++;
+        if (this.currentMusician >= this.musicians.length) {
+            this.currentMusician = 0;
+            this.currentPlace++;
+            // recover an energy per minute
+            this.musicians.forEach(function (musician) {
+                musician.energy++;
+            });
+        }
+        if (this.currentPlace > this.currentSong.idea.length) {
+            this.currentSong = null;
+            this.songsPlayed++;
+        }
+    };
     Concert.prototype.playSong = function (song) {
         if (!this.currentSong || this.currentPlace > this.currentSong.idea.length) {
             this.setlist.push(song);
@@ -359,6 +408,9 @@ var Concert = (function () {
         else {
             alert("The current song is not done!");
         }
+    };
+    Concert.prototype.metricName = function (metric) {
+        return MoveType[metric];
     };
     return Concert;
 })();
@@ -389,6 +441,8 @@ var EffectLocality;
 })(EffectLocality || (EffectLocality = {}));
 var Harmony = (function () {
     function Harmony(length, strength) {
+        this.name = "Harmony";
+        this.description = "Boost the next successful music move";
         this.type = EffectType.Harmony;
         this.locality = EffectLocality.Party;
         this.length = length;
@@ -398,6 +452,7 @@ var Harmony = (function () {
 })();
 var PlayNote = (function () {
     function PlayNote() {
+        this.name = "Play";
         this.type = MoveType.Musical;
         this.energyCost = 1;
         this.difficulty = 1;
@@ -407,6 +462,7 @@ var PlayNote = (function () {
 })();
 var Solo = (function () {
     function Solo() {
+        this.name = "Solo";
         this.type = MoveType.Musical;
         this.energyCost = 2;
         this.difficulty = 2;
@@ -416,6 +472,7 @@ var Solo = (function () {
 })();
 var Shred = (function () {
     function Shred() {
+        this.name = "Shred";
         this.type = MoveType.Technical;
         this.energyCost = 3;
         this.difficulty = 3;
@@ -425,6 +482,7 @@ var Shred = (function () {
 })();
 var Harmonize = (function () {
     function Harmonize() {
+        this.name = "Harmonize";
         this.type = MoveType.Musical;
         this.energyCost = 2;
         this.difficulty = 2;
@@ -435,6 +493,7 @@ var Harmonize = (function () {
 })();
 var TalkToCrowd = (function () {
     function TalkToCrowd() {
+        this.name = "Talk to the crowd";
         this.type = MoveType.StagePresence;
         this.energyCost = 1;
         this.difficulty = 2;
@@ -593,7 +652,7 @@ battleBands.controller('GameController', ['$scope', function ($scope) {
         $scope.PlayShow = function (venue, slot) {
             //TODO: check if the venue is ope
             $scope.CurrentGameState = GameState.Concert;
-            $scope.concert = new Concert(venue, slot, $scope.currentCity);
+            $scope.concert = new Concert(venue, slot, $scope.currentCity, $scope.band.members);
         };
         $scope.writeSong = function () {
             $scope.SongOptions = $scope.band.writeSong(3);
@@ -639,6 +698,14 @@ battleBands.controller('GameController', ['$scope', function ($scope) {
         $scope.selectedCity = null;
         $scope.cityClick = function (city) {
             $scope.selectedCity = city;
+        };
+        $scope.endShow = function (concert) {
+            $scope.band.money += concert.payout;
+            $scope.concert = null;
+            $scope.CurrentGameState = GameState.MainCity;
+            $scope.band.currentTime = 0;
+            $scope.band.currentDay++;
+            //TODO: add grading and fan handling and stuff
         };
         $scope.unequip = function (member, eq) {
             var index = member.equipment.indexOf(eq);

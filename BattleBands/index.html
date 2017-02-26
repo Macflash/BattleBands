@@ -114,6 +114,13 @@
                                 <button ng-click="unequip(member, eq)">Unequip</button>
                                 <button ng-click="sell(member, eq)">Sell for ${{GetSalePrice(eq)}}</button>
                             </div>
+                            <div ng-repeat="move in member.moves">
+                                <div>{{move.name}}</div>
+                                <div>Type: {{move.type}}</div>
+                                <div>Difficulty: {{move.dificulty}}</div>
+                                <div>Power: {{move.power}}</div>
+                                <div>Energy Cost: {{move.energyCost}}</div>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -224,10 +231,13 @@
             <div id="ConcertStatus">
                 <div id="Setlist">
                     <div id="Played Songs">
-                        <div ng-repeat="song in concert.setlist">{{song.name}}</div>
+                        {{concert.songsPlayed}} / {{concert.maxSetLength}}<br />
+                        Setlist:
+                        <span ng-repeat="song in concert.setlist">{{song.idea.name}},</span>
                     </div>
                     <div id="SongCatalog" style="outline: 2px solid black; padding: 5px; margin: 5px; max-height:200px; overflow-y: auto;">
-                        <div ng-show="!concert.currentSong || (concert.setlist.indexOf(song) < 0 && concert.currentSong.idea.length < concert.currentPlace)" ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : (song.idea.quality > 10 ? 'black' : 'brown'))))) }}; padding: 5px; margin: 5px;">
+                        <button ng-click="endShow(concert)" ng-disabled="concert.songsPlayed < concert.minSetLength">End Show</button>
+                        <div ng-show="(concert.songsPlayed < concert.maxSetLength) && !concert.currentSong && concert.setlist.indexOf(song) < 0" ng-repeat="song in band.songCatalog" style="outline: 2px solid {{ song.idea.quality > 95 ? 'gold' : (song.idea.quality > 90 ? 'purple' : (song.idea.quality > 70 ? 'blue' : (song.idea.quality > 40 ? 'green' : (song.idea.quality > 20 ? 'grey' : (song.idea.quality > 10 ? 'black' : 'brown'))))) }}; padding: 5px; margin: 5px;">
                             <button ng-click="show=true" ng-show="!show">+</button>
                             <button ng-click="show=false" ng-show="show">-</button>
                             <i>{{song.idea.name}}</i>
@@ -243,9 +253,33 @@
                 <div id="SongTracker">
                     {{concert.currentSong.idea.name || 'Pick a song'}}
                     {{concert.currentPlace * 1000 * 60 | date : "mm:ss"}} / {{concert.currentSong.idea.length * 1000 * 60 | date : "mm:ss"}}
+                    
                 </div>
-                <div id="MusicMoves"></div>
-                <div id="CurrentResults"></div>
+                <div id="MusicMoves" ng-show="concert.currentSong">
+                    <div style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                        <div>{{band.members[concert.currentMusician].name}}</div>
+                        <div>Energy: {{band.members[concert.currentMusician].energy}}</div>
+                        <div ng-repeat="skill in band.members[concert.currentMusician].skill track by $index">
+                            {{InstrumentSlot[$index]}}: {{skill}}
+                        </div>
+                        <div ng-repeat="eq in band.members[concert.currentMusician].equipment track by $index">
+                            {{eq.name}}: {{eq.quality}} ({{eq.condition}}%)
+                            <button ng-click="unequip(member, eq)">Unequip</button>
+                            <button ng-click="sell(member, eq)">Sell for ${{GetSalePrice(eq)}}</button>
+                        </div>
+                        <div ng-repeat="move in band.members[concert.currentMusician].moves" style="outline: 2px solid black; padding: 5px; margin: 5px;">
+                            <div>{{move.name}}</div>
+                            <div>Type: {{move.type}}</div>
+                            <div>Difficulty: {{move.difficulty}}</div>
+                            <div>Power: {{move.damage}}</div>
+                            <div>Energy Cost: {{move.energyCost}}</div>
+                            <div><button ng-click="concert.playMove(band.members[concert.currentMusician], move)" ng-disabled="move.energyCost > band.members[concert.currentMusician].energy">Use</button></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="CurrentResults">
+                    <div ng-repeat="metric in concert.metrics track by $index">{{concert.metricName($index)}}: {{metric}}</div>
+                </div>
             </div>
         </div>
 

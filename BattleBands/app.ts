@@ -352,6 +352,7 @@ class BassGuitar implements IMusicEquipment {
 }
 
 enum MoveType {
+    None,
     Musical, // this is like "Normal" in pokemon
     Technical, // this is like shredding
     Style, // this is like cool stuff
@@ -364,21 +365,25 @@ interface IConcertGoer {
     favoriteSongs: Song[];
 }
 
+class BasicConcertGoer implements IConcertGoer {
+    prefferedMoves = MoveType.None;
+    currentEngagement = flatRandom(0, 20);
+    favoriteSongs = [];
+}
+
 class Concert {
     crowd: IConcertGoer[];
     setlist: Song[];
     currentSong: Song;
     currentPlace: number; // how far into the song we are
     currentMusician: number; // which member you are on
+    musicians: IMusician[]; // the members at the show
 
     maxSetLength: number;
     minSetLength: number;
 
     // current metrics
-    music: number;
-    technical: number;
-    style: number;
-    presence: number;
+    metrics: number[]; //indexed by move type
 
     //indirect metrics
     energry: number;
@@ -396,6 +401,45 @@ class Concert {
     ticketsSold: number;
     barSales: number;
 
+    songsPlayed: number;
+    payout: number;
+
+    public playMove(musician: IMusician, move: IMusicMove) {
+        musician.energy -= move.energyCost;
+        // have to handle the familiarity of the song
+        var skillBonus = Math.sqrt(musician.skill[musician.equipment[0].type]);
+        var roll = flatRandom(0, 10);
+        var difficulty = move.difficulty;
+        console.log("skill:" + skillBonus + "/roll:" + roll + "/difficulty:" + difficulty);
+        if (roll < skillBonus) {
+            console.log("Success!");
+            //success!
+            this.metrics[move.type] += move.damage;
+
+            // TODO: add effects to the current musician / concert
+        }
+        else {
+            console.log("Fail...");
+            this.metrics[move.type] *= .9;
+        }
+
+        this.currentMusician++;
+        if (this.currentMusician >= this.musicians.length) {
+            this.currentMusician = 0;
+            this.currentPlace++;
+
+            // recover an energy per minute
+            this.musicians.forEach((musician) => {
+                musician.energy++;
+            });
+        }
+
+        if (this.currentPlace > this.currentSong.idea.length) {
+            this.currentSong = null;
+            this.songsPlayed++;
+        }
+    }
+    
     public playSong(song: Song) {
         if (!this.currentSong || this.currentPlace > this.currentSong.idea.length) {
             this.setlist.push(song);
@@ -407,18 +451,24 @@ class Concert {
         }
     }
 
-    constructor(venue: IVenue, slot: IPerformanceSlot, city: City) {
+    public metricName(metric: MoveType): string {
+        return MoveType[metric];
+    }
+
+    constructor(venue: IVenue, slot: IPerformanceSlot, city: City, musicians: IMusician[]) {
+        this.songsPlayed = 0;
         this.crowd = [];
+        this.musicians = musicians;
         this.setlist = [];
         this.currentSong = null;
         this.maxSetLength = slot.maxSongs;
         this.minSetLength = slot.minSongs;
 
         // current metrics
-        this.music = 50;
-        this.technical = 50;
-        this.style = 50;
-        this.presence = 50;
+        this.metrics = [];
+        for (var i = 0; i < 5; i++) {
+            this.metrics[i] = 50;
+        }
 
         //indirect metrics
         this.energry = 50;
@@ -447,6 +497,17 @@ class Concert {
         if (this.ticketsSold == venue.capacity) {
             console.log("you sold out the venue!");
         }
+
+        for (var i = 0; i < this.ticketsSold; i++) {
+            this.crowd.push(new BasicConcertGoer());
+        }
+
+        this.payout = slot.paymentFlat + slot.paymentPercent * this.ticketPrice * this.ticketsSold;
+
+        // current song setup
+        this.currentSong = null;
+        this.currentPlace = 0;
+        this.currentMusician = 0;
     }
 }
 
@@ -477,6 +538,8 @@ enum EffectLocality {
 }
 
 interface IEffect {
+    name: string;
+    description: string;
     type: EffectType;
     locality: EffectLocality;
     strength: number; // relative strength, not always used
@@ -484,6 +547,8 @@ interface IEffect {
 }
 
 class Harmony implements IEffect {
+    name = "Harmony";
+    description = "Boost the next successful music move";
     type = EffectType.Harmony;
     locality = EffectLocality.Party;
     strength: number; // relative strength, not always used
@@ -495,6 +560,7 @@ class Harmony implements IEffect {
 }
 
 interface IMusicMove {
+    name: string;
     type: MoveType;
     energyCost: number;
     difficulty: number;
@@ -504,6 +570,7 @@ interface IMusicMove {
 }
 
 class PlayNote implements IMusicMove {
+    name = "Play";
     type = MoveType.Musical;
     energyCost = 1;
     difficulty = 1;
@@ -511,6 +578,7 @@ class PlayNote implements IMusicMove {
 }
 
 class Solo implements IMusicMove {
+    name = "Solo";
     type = MoveType.Musical;
     energyCost = 2;
     difficulty = 2;
@@ -518,6 +586,7 @@ class Solo implements IMusicMove {
 }
 
 class Shred implements IMusicMove {
+    name = "Shred";
     type = MoveType.Technical;
     energyCost = 3;
     difficulty = 3;
@@ -525,6 +594,7 @@ class Shred implements IMusicMove {
 }
 
 class Harmonize implements IMusicMove {
+    name = "Harmonize";
     type = MoveType.Musical;
     energyCost = 2;
     difficulty = 2;
@@ -533,6 +603,7 @@ class Harmonize implements IMusicMove {
 }
 
 class TalkToCrowd implements IMusicMove {
+    name = "Talk to the crowd";
     type = MoveType.StagePresence;
     energyCost = 1;
     difficulty = 2;
@@ -734,6 +805,7 @@ interface GameScope {
     CurrentGameState: GameState;
     GameState: any;
     concert: Concert;
+    endShow: any;
 }
 
 enum GameState {
@@ -749,7 +821,7 @@ battleBands.controller('GameController', ['$scope', ($scope: GameScope) => {
     $scope.PlayShow = (venue: IVenue, slot: IPerformanceSlot) => {
         //TODO: check if the venue is ope
         $scope.CurrentGameState = GameState.Concert;
-        $scope.concert = new Concert(venue, slot, $scope.currentCity);
+        $scope.concert = new Concert(venue, slot, $scope.currentCity, $scope.band.members);
     }
 
     $scope.writeSong = () => {
@@ -801,6 +873,16 @@ battleBands.controller('GameController', ['$scope', ($scope: GameScope) => {
 
     $scope.cityClick = (city: City) => {
         $scope.selectedCity = city;
+    }
+
+    $scope.endShow = (concert: Concert) => {
+        $scope.band.money += concert.payout;
+        $scope.concert = null;
+        $scope.CurrentGameState = GameState.MainCity;
+        $scope.band.currentTime = 0;
+        $scope.band.currentDay++;
+
+        //TODO: add grading and fan handling and stuff
     }
 
     $scope.unequip = (member: IMusician, eq: IMusicEquipment) => {
